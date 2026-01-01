@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist/public"
+
+# Redirect all routes to index.html for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# If you need API routes, you'll need to use Netlify Functions
+# For now, this configuration will serve the static frontend
+# Note: Netlify doesn't support full Express servers directly
+# You may need to:
+# 1. Deploy the frontend to Netlify (this config)
+# 2. Deploy the backend separately to a Node.js hosting service (Railway, Render, etc.)
+# 3. Or convert API routes to Netlify Functions
+
+[build.environment]
+  NODE_VERSION = "20"
+
