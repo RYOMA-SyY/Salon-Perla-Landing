@@ -1,0 +1,617 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, MapPin, Phone, Instagram, Clock, Sparkles, Crown, Eye, Scissors, Hand, Star, X, Plus, Trash2, Edit2, Tag } from 'lucide-react';
+
+const PerlaBeautyCenter = () => {
+  const [activeSection, setActiveSection] = useState('home');
+  const [selectedService, setSelectedService] = useState(null);
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [editingPost, setEditingPost] = useState(null);
+  const [newPost, setNewPost] = useState({
+    title: '',
+    description: '',
+    image: '',
+    type: 'gallery',
+    discount: ''
+  });
+
+  const services = [
+    {
+      id: 'hammam',
+      name: 'Hammam',
+      iconName: 'Sparkles',
+      description: 'Expérience de spa traditionnel marocain avec gommage et soins du corps pour une détente absolue',
+      price: 'À partir de 200 DH',
+      duration: '60-90 min'
+    },
+    {
+      id: 'coiffure',
+      name: 'Coiffure',
+      iconName: 'Scissors',
+      description: 'Coupe, coloration, brushing et soins capillaires professionnels adaptés à votre style',
+      price: 'À partir de 150 DH',
+      duration: '45-120 min'
+    },
+    {
+      id: 'esthetique',
+      name: 'Esthétique',
+      iconName: 'Crown',
+      description: 'Soins du visage, masques purifiants, épilation et traitements beauté personnalisés',
+      price: 'À partir de 180 DH',
+      duration: '30-90 min'
+    },
+    {
+      id: 'onglerie',
+      name: 'Onglerie',
+      iconName: 'Hand',
+      description: 'Manucure, pédicure, pose de vernis semi-permanent et nail art créatif',
+      price: 'À partir de 100 DH',
+      duration: '45-60 min'
+    },
+    {
+      id: 'microblading',
+      name: 'Microblading',
+      iconName: 'Eye',
+      description: 'Restructuration des sourcils avec technique semi-permanente pour un regard naturel',
+      price: 'À partir de 800 DH',
+      duration: '120-180 min'
+    },
+    {
+      id: 'cils',
+      name: 'Cils',
+      iconName: 'Star',
+      description: 'Extensions de cils volume russe, rehaussement et teinture pour un regard intense',
+      price: 'À partir de 250 DH',
+      duration: '60-90 min'
+    }
+  ];
+
+  const getIcon = (iconName) => {
+    const icons = {
+      Sparkles: Sparkles,
+      Scissors: Scissors,
+      Crown: Crown,
+      Hand: Hand,
+      Eye: Eye,
+      Star: Star
+    };
+    const Icon = icons[iconName];
+    return Icon ? <Icon className="w-12 h-12" /> : null;
+  };
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    try {
+      const result = await window.storage.list('post:');
+      if (result && result.keys) {
+        const loadedPosts = [];
+        for (const key of result.keys) {
+          try {
+            const postData = await window.storage.get(key);
+            if (postData && postData.value) {
+              loadedPosts.push(JSON.parse(postData.value));
+            }
+          } catch (err) {
+            console.log('Error loading post:', err);
+          }
+        }
+        loadedPosts.sort((a, b) => b.timestamp - a.timestamp);
+        setPosts(loadedPosts);
+      }
+    } catch (error) {
+      console.log('No posts found:', error);
+    }
+  };
+
+  const handleWhatsAppBooking = (service) => {
+    const message = service 
+      ? `Bonjour, je souhaite réserver un rendez-vous pour ${service.name}.`
+      : `Bonjour, je souhaite réserver un rendez-vous.`;
+    
+    window.open(
+      `https://wa.me/212522784142?text=${encodeURIComponent(message)}`, 
+      '_blank'
+    );
+  };
+
+  const handleAdminLogin = () => {
+    if (adminPassword === 'perla2024') {
+      setAdminMode(true);
+      setShowAdminLogin(false);
+      setAdminPassword('');
+    } else {
+      alert('Mot de passe incorrect');
+    }
+  };
+
+  const savePost = async () => {
+    if (!newPost.title || !newPost.description) {
+      alert('Veuillez remplir tous les champs requis');
+      return;
+    }
+
+    const post = {
+      ...newPost,
+      id: editingPost ? editingPost.id : `post_${Date.now()}`,
+      timestamp: editingPost ? editingPost.timestamp : Date.now()
+    };
+    
+    try {
+      await window.storage.set(`post:${post.id}`, JSON.stringify(post));
+      
+      const updatedPosts = editingPost 
+        ? posts.map(p => p.id === post.id ? post : p)
+        : [post, ...posts];
+      
+      setPosts(updatedPosts);
+      setNewPost({ title: '', description: '', image: '', type: 'gallery', discount: '' });
+      setEditingPost(null);
+    } catch (error) {
+      alert('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const editPost = (post) => {
+    setEditingPost(post);
+    setNewPost({ ...post });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deletePost = async (postId) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette publication?')) {
+      try {
+        await window.storage.delete(`post:${postId}`);
+        setPosts(posts.filter(p => p.id !== postId));
+      } catch (error) {
+        alert('Erreur lors de la suppression');
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white" style={{ fontFamily: "'Raleway', 'Arial', sans-serif", fontSize: '14px', lineHeight: '1.6', color: '#868686' }}>
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 py-6" style={{ maxWidth: '1600px' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-5xl font-normal" style={{ fontFamily: "'Indie Flower', sans-serif", color: '#5c3474', lineHeight: '1.2' }}>
+                Perla
+              </h1>
+              <p className="text-sm" style={{ fontFamily: "'Lato', 'Arial', sans-serif", color: '#181818', fontWeight: '400' }}>Beauty Center</p>
+              <p className="text-xs" style={{ color: '#868686' }}>Sidi Maarouf, Casablanca</p>
+            </div>
+            <button
+              onClick={() => setShowAdminLogin(true)}
+              className="text-xs hover:opacity-70 transition-opacity"
+              style={{ color: '#868686', opacity: '0.3' }}
+            >
+              Admin
+            </button>
+          </div>
+          <nav className="flex space-x-6 mt-6 overflow-x-auto">
+            {['home', 'services', 'gallery', 'contact'].map((section) => (
+              <button
+                key={section}
+                onClick={() => setActiveSection(section)}
+                className="pb-2 font-normal text-sm uppercase tracking-wide transition-colors whitespace-nowrap"
+                style={{
+                  fontFamily: "'Lato', 'Arial', sans-serif",
+                  color: activeSection === section ? '#5c3474' : '#181818',
+                  borderBottom: activeSection === section ? '2px solid #5c3474' : '2px solid transparent',
+                  fontWeight: '400'
+                }}
+              >
+                {section}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        {/* HOME SECTION */}
+        {activeSection === 'home' && (
+          <div>
+            {/* Hero Section */}
+            <section className="relative px-4 py-32 text-center" style={{ minHeight: '600px', backgroundColor: '#f8f8f8' }}>
+              <div className="relative z-10 max-w-4xl mx-auto">
+                <h2 className="mb-6" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '59px', lineHeight: '1.2', color: '#181818', fontWeight: '400' }}>
+                  Bienvenue chez Perla
+                </h2>
+                <p className="mb-8 text-lg" style={{ color: '#868686', maxWidth: '600px', margin: '0 auto 2rem' }}>
+                  Votre sanctuaire de beauté à Sidi Maarouf. Découvrez nos services premium dans un cadre raffiné et élégant.
+                </p>
+                <button
+                  onClick={() => handleWhatsAppBooking(null)}
+                  className="inline-flex items-center space-x-2 px-8 py-4 transition-all"
+                  style={{
+                    backgroundColor: '#5c3474',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontFamily: "'Lato', 'Arial', sans-serif",
+                    fontSize: '15px',
+                    fontWeight: '400',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a2960'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5c3474'}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span>Réserver maintenant</span>
+                </button>
+              </div>
+            </section>
+
+            {/* Feature Cards */}
+            <section className="px-4 py-20">
+              <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+                <div className="text-center p-8 border border-gray-200 transition-all" style={{ backgroundColor: '#ffffff' }}>
+                  <Crown className="w-12 h-12 mx-auto mb-4" style={{ color: '#69727d' }} />
+                  <h3 className="mb-3" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                    Luxe & Élégance
+                  </h3>
+                  <p style={{ color: '#868686' }}>Services premium dans un cadre raffiné et une atmosphère apaisante</p>
+                </div>
+                <div className="text-center p-8 border border-gray-200 transition-all" style={{ backgroundColor: '#ffffff' }}>
+                  <Star className="w-12 h-12 mx-auto mb-4" style={{ color: '#69727d' }} />
+                  <h3 className="mb-3" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                    Expertise
+                  </h3>
+                  <p style={{ color: '#868686' }}>Professionnels qualifiés et expérimentés pour des résultats exceptionnels</p>
+                </div>
+                <div className="text-center p-8 border border-gray-200 transition-all" style={{ backgroundColor: '#ffffff' }}>
+                  <Sparkles className="w-12 h-12 mx-auto mb-4" style={{ color: '#69727d' }} />
+                  <h3 className="mb-3" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                    Produits de Qualité
+                  </h3>
+                  <p style={{ color: '#868686' }}>Marques reconnues et soins sur mesure pour votre beauté</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Services Preview */}
+            <section className="px-4 py-20" style={{ backgroundColor: '#f8f8f8' }}>
+              <div className="max-w-6xl mx-auto">
+                <h2 className="text-center mb-12" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '39px', color: '#181818', fontWeight: '400', lineHeight: '1.2' }}>
+                  Nos Services
+                </h2>
+                <div className="grid md:grid-cols-3 gap-8">
+                  {services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="bg-white overflow-hidden transition-all"
+                      style={{ border: '1px solid #e5e5e5' }}
+                    >
+                      <div className="h-48 flex items-center justify-center" style={{ backgroundColor: '#f5f5f5', color: '#69727d' }}>
+                        {getIcon(service.iconName)}
+                      </div>
+                      <div className="p-6">
+                        <h3 className="mb-3" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                          {service.name}
+                        </h3>
+                        <p className="mb-4 text-sm" style={{ color: '#868686' }}>{service.description}</p>
+                        <div className="flex items-center justify-between mb-4">
+                          <span style={{ fontFamily: "'Lato', 'Arial', sans-serif", color: '#181818', fontWeight: '400' }}>
+                            {service.price}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedService(service);
+                              setActiveSection('services');
+                            }}
+                            className="transition-colors"
+                            style={{ color: '#181818', textDecoration: 'none', fontSize: '14px' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#5c3474'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#181818'}
+                          >
+                            En savoir plus →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* SERVICES SECTION */}
+        {activeSection === 'services' && (
+          <section className="px-4 py-20">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-center mb-12" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '39px', color: '#181818', fontWeight: '400', lineHeight: '1.2' }}>
+                Nos Services
+              </h2>
+              <div className="grid md:grid-cols-2 gap-12">
+                {services.map((service) => (
+                  <div
+                    key={service.id}
+                    className="bg-white overflow-hidden"
+                    style={{ border: '1px solid #e5e5e5' }}
+                  >
+                    <div className="h-64 flex flex-col items-center justify-center" style={{ backgroundColor: '#f5f5f5', color: '#69727d' }}>
+                      {getIcon(service.iconName)}
+                      <h3 className="mt-4" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '29px', color: '#181818', fontWeight: '400' }}>
+                        {service.name}
+                      </h3>
+                    </div>
+                    <div className="p-8">
+                      <p className="mb-6" style={{ color: '#868686', lineHeight: '1.6' }}>{service.description}</p>
+                      <div className="flex justify-between mb-6 pb-6" style={{ borderBottom: '1px solid #e5e5e5' }}>
+                        <div>
+                          <p className="text-xs mb-1" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Prix</p>
+                          <p style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                            {service.price}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs mb-1" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Durée</p>
+                          <p style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '15px', color: '#181818', fontWeight: '400' }}>
+                            {service.duration}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleWhatsAppBooking(service)}
+                        className="w-full py-3 transition-all inline-flex items-center justify-center space-x-2"
+                        style={{
+                          backgroundColor: '#5c3474',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontFamily: "'Lato', 'Arial', sans-serif",
+                          fontSize: '15px',
+                          fontWeight: '400',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a2960'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5c3474'}
+                      >
+                        <Calendar className="w-5 h-5" />
+                        <span>Réserver sur WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* GALLERY SECTION */}
+        {activeSection === 'gallery' && (
+          <section className="px-4 py-20">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-center mb-12" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '39px', color: '#181818', fontWeight: '400', lineHeight: '1.2' }}>
+                Galerie & Offres
+              </h2>
+
+              {/* Admin Panel */}
+              {adminMode && (
+                <div className="bg-white p-8 mb-12" style={{ border: '2px solid #5c3474' }}>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                      {editingPost ? 'Modifier la publication' : 'Ajouter une publication'}
+                    </h3>
+                    {editingPost && (
+                      <button
+                        onClick={() => {
+                          setEditingPost(null);
+                          setNewPost({ title: '', description: '', image: '', type: 'gallery', discount: '' });
+                        }}
+                        style={{ color: '#868686' }}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs mb-2" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Type</label>
+                      <select
+                        value={newPost.type}
+                        onChange={(e) => setNewPost({ ...newPost, type: e.target.value })}
+                        className="w-full px-4 py-2"
+                        style={{ border: '1px solid #e5e5e5', fontFamily: "'Raleway', 'Arial', sans-serif" }}
+                      >
+                        <option value="gallery">Galerie (Travaux)</option>
+                        <option value="deal">Offre Spéciale</option>
+                        <option value="announcement">Annonce</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-2" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Titre</label>
+                      <input
+                        type="text"
+                        value={newPost.title}
+                        onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                        placeholder="Ex: Nouvelle coiffure tendance"
+                        className="w-full px-4 py-2"
+                        style={{ border: '1px solid #e5e5e5', fontFamily: "'Raleway', 'Arial', sans-serif" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-2" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Description</label>
+                      <textarea
+                        value={newPost.description}
+                        onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
+                        placeholder="Décrivez votre publication..."
+                        className="w-full px-4 py-2 h-24"
+                        style={{ border: '1px solid #e5e5e5', fontFamily: "'Raleway', 'Arial', sans-serif" }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-2" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>URL Image</label>
+                      <input
+                        type="text"
+                        value={newPost.image}
+                        onChange={(e) => setNewPost({ ...newPost, image: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2"
+                        style={{ border: '1px solid #e5e5e5', fontFamily: "'Raleway', 'Arial', sans-serif" }}
+                      />
+                    </div>
+                    {newPost.type === 'deal' && (
+                      <div>
+                        <label className="block text-xs mb-2" style={{ color: '#868686', textTransform: 'uppercase', letterSpacing: '1px' }}>Réduction</label>
+                        <input
+                          type="text"
+                          value={newPost.discount}
+                          onChange={(e) => setNewPost({ ...newPost, discount: e.target.value })}
+                          placeholder="Ex: -30% sur tous les soins"
+                          className="w-full px-4 py-2"
+                          style={{ border: '1px solid #e5e5e5', fontFamily: "'Raleway', 'Arial', sans-serif" }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex space-x-4 pt-4">
+                      <button
+                        onClick={savePost}
+                        className="flex-1 py-3 transition-all inline-flex items-center justify-center space-x-2"
+                        style={{
+                          backgroundColor: '#5c3474',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontFamily: "'Lato', 'Arial', sans-serif",
+                          fontWeight: '400',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a2960'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5c3474'}
+                      >
+                        <Plus className="w-5 h-5" />
+                        <span>{editingPost ? 'Mettre à jour' : 'Publier'}</span>
+                      </button>
+                      {editingPost && (
+                        <button
+                          onClick={() => {
+                            setEditingPost(null);
+                            setNewPost({ title: '', description: '', image: '', type: 'gallery', discount: '' });
+                          }}
+                          className="px-6 py-3"
+                          style={{ border: '1px solid #e5e5e5', backgroundColor: '#ffffff' }}
+                        >
+                          Annuler
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Posts Grid */}
+              {posts.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center" style={{ border: '2px solid #e5e5e5' }}>
+                    <span className="text-5xl">📷</span>
+                  </div>
+                  <p style={{ color: '#868686', fontSize: '19px' }}>Aucune publication pour le moment</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-8">
+                  {posts.map((post) => (
+                    <div
+                      key={post.id}
+                      className="bg-white overflow-hidden transition-all relative"
+                      style={{ border: '1px solid #e5e5e5' }}
+                    >
+                      {post.type === 'deal' && post.discount && (
+                        <div className="absolute top-4 right-4 z-10 px-4 py-2" style={{ backgroundColor: '#5c3474', color: '#ffffff', fontSize: '12px' }}>
+                          <Tag className="w-4 h-4 inline mr-1" />
+                          {post.discount}
+                        </div>
+                      )}
+                      <div className="h-64 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#f5f5f5' }}>
+                        {post.image ? (
+                          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-6xl">📷</span>
+                        )}
+                      </div>
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '19px', color: '#181818', fontWeight: '400' }}>
+                            {post.title}
+                          </h3>
+                          {adminMode && (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => editPost(post)}
+                                style={{ color: '#5c3474' }}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deletePost(post.id)}
+                                style={{ color: '#868686' }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="mb-4" style={{ color: '#868686' }}>{post.description}</p>
+                        {post.type === 'deal' && (
+                          <button
+                            onClick={() => handleWhatsAppBooking(null)}
+                            className="w-full py-2 transition-all"
+                            style={{
+                              backgroundColor: '#5c3474',
+                              color: '#ffffff',
+                              border: 'none',
+                              fontFamily: "'Lato', 'Arial', sans-serif",
+                              fontWeight: '400',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a2960'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#5c3474'}
+                          >
+                            Profiter de l'offre
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* CONTACT SECTION */}
+        {activeSection === 'contact' && (
+          <section className="px-4 py-20">
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-center mb-12" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '39px', color: '#181818', fontWeight: '400', lineHeight: '1.2' }}>
+                Contactez-nous
+              </h2>
+              <div className="grid md:grid-cols-2 gap-12">
+                {/* Left Column */}
+                <div className="space-y-8">
+                  <div className="flex items-start space-x-4 p-6" style={{ border: '1px solid #e5e5e5' }}>
+                    <div className="p-3" style={{ backgroundColor: '#f5f5f5' }}>
+                      <Phone className="w-6 h-6" style={{ color: '#69727d' }} />
+                    </div>
+                    <div>
+                      <h3 className="mb-1" style={{ fontFamily: "'Lato', 'Arial', sans-serif", fontSize: '15px', color: '#181818', fontWeight: '400' }}>
+                        Téléphone
+                      </h3>
+                      <a
+                        href="tel:0522784142"
+                        className="transition-colors"
+                        style={{ color: '#868686', textDecoration: 'none' }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#5c3474'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#868686'}
+                      >
+                        05 22 78 41 42
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4 p-6" style={{ border: '1px solid #e
